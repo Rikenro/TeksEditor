@@ -1,90 +1,111 @@
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
+import java.util.Scanner;
 import java.util.Stack;
 
 public class TextEditor {
-    private char[] currentText;      // Menyimpan teks saat ini
-    private Stack<String> undoStack; // Stack untuk menyimpan teks untuk fungsi undo
-    private Stack<String> redoStack; // Stack untuk menyimpan teks untuk fungsi redo
-    private int textLength;           // Menyimpan panjang teks saat ini
+    private String text;
+    private Stack<String> undoStack;
+    private Stack<String> redoStack;
 
     public TextEditor() {
-        currentText = new char[1000]; // Ukuran array karakter awal
+        text = "";
         undoStack = new Stack<>();
         redoStack = new Stack<>();
-        textLength = 0;
     }
 
-    // Fungsi untuk menampilkan isi teks saat ini
-    public void show() {
-        System.out.print("Current Text: ");
-        for (int i = 0; i < textLength; i++) {
-            System.out.print(currentText[i]);
-        }
-        System.out.println();
-    }
-
-    // Fungsi untuk menambahkan teks baru
-    public void write(String text) {
-        undoStack.push(new String(currentText, 0, textLength)); // Simpan teks sebelum perubahan ke undoStack
-        for (char c : text.toCharArray()) {
-            if (textLength < currentText.length) {
-                currentText[textLength++] = c; // Tambahkan karakter ke array
+    public void loadFile(String filePath) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
+            StringBuilder fileContent = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                fileContent.append(line).append("\n");
             }
+            text = fileContent.toString();
+            System.out.println("File berhasil dimuat.");
+        } catch (IOException e) {
+            System.out.println("Error saat memuat file: " + e.getMessage());
         }
-        redoStack.clear(); // Kosongkan redoStack setelah menulis teks baru
     }
 
-    // Fungsi untuk mengembalikan teks ke isi sebelumnya
+    public void saveFile(String filePath) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
+            writer.write(text);
+            System.out.println("File berhasil disimpan.");
+        } catch (IOException e) {
+            System.out.println("Error saving file: " + e.getMessage());
+        }
+    }
+
+    public void write(String newText) {
+        undoStack.push(text);
+        redoStack.clear();
+        text += newText;
+    }
+
+    public void show() {
+        System.out.println( text);
+    }
+
     public void undo() {
         if (!undoStack.isEmpty()) {
-            redoStack.push(new String(currentText, 0, textLength)); // Simpan teks saat ini ke redoStack
-            String previousText = undoStack.pop();
-            currentText = previousText.toCharArray(); // Kembalikan ke teks sebelumnya
-            textLength = previousText.length(); // Perbarui panjang teks
+            redoStack.push(text);
+            text = undoStack.pop();
         } else {
-            System.out.println("Tidak ada tindakan yang bisa di-undo.");
+            System.out.println("silahkan masukkan kalimat");
         }
     }
 
-    // Fungsi untuk memulihkan teks ke isi yang lebih baru
     public void redo() {
         if (!redoStack.isEmpty()) {
-            undoStack.push(new String(currentText, 0, textLength)); // Simpan teks saat ini ke undoStack
-            String nextText = redoStack.pop();
-            currentText = nextText.toCharArray(); // Kembalikan ke teks yang lebih baru
-            textLength = nextText.length(); // Perbarui panjang teks
+            undoStack.push(text);
+            text = redoStack.pop();
         } else {
-            System.out.println("Tidak ada tindakan yang bisa di-redo.");
-        }
-    }
-
-    // Fungsi untuk menyimpan isi text editor ke file .txt
-    public void exportToFile(String filename) {
-        try (FileWriter writer = new FileWriter(filename)) {
-            writer.write(currentText, 0, textLength); // Simpan karakter ke file
-            System.out.println("Teks berhasil disimpan ke file " + filename);
-        } catch (IOException e) {
-            System.out.println("Terjadi kesalahan saat menyimpan file: " + e.getMessage());
+            System.out.println("silahkan masukkan kalimat");
         }
     }
 
     public static void main(String[] args) {
         TextEditor editor = new TextEditor();
+        Scanner scanner = new Scanner(System.in);
+        String perintah;
 
-        editor.write("Hello ");
-        editor.write("world!");
-        editor.show();
+        System.out.println("Contoh:C:\\Users\\Dell Latitude\\Documents\\test.txt");
+        System.out.print("Masukkan nama file: ");
+        String filePath = scanner.nextLine();
+        editor.loadFile(filePath);
 
-        editor.undo();
-        editor.show();
+        while (true) {
+            System.out.print("Masukkan perintah (write/show/undo/redo/save/exit): ");
+            perintah = scanner.nextLine().trim();
 
-        editor.redo();
-        editor.show();
-
-        editor.write(" Let's code!");
-        editor.show();
-
-        editor.exportToFile("output.txt");
+            switch (perintah.toLowerCase()) {
+                case "write":
+                    System.out.print("Enter text to write: ");
+                    String textToWrite = scanner.nextLine();
+                    editor.write(textToWrite);
+                    break;
+                case "show":
+                    editor.show();
+                    break;
+                case "undo":
+                    editor.undo();
+                    break;
+                case "redo":
+                    editor.redo();
+                    break;
+                case "save":
+                    System.out.println("Contoh:C:\\Users\\Dell Latitude\\Documents\\test.txt");
+                    System.out.print("Tulis alamat untuk menyimpan file: ");
+                    String savePath = scanner.nextLine();
+                    editor.saveFile(savePath);
+                    break;
+                case "exit":
+                    System.out.println("Exiting the editor.");
+                    scanner.close();
+                    return;
+                default:
+                    System.out.println("Unknown command. Please try again.");
+            }
+        }
     }
 }
